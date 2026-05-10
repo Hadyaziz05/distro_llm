@@ -13,7 +13,7 @@ Or:  uvicorn worker:app --workers 4 --host 0.0.0.0 --port 8000
 
 import os
 import uvicorn
-from worker.config import settings
+from config import settings
 
 if __name__ == "__main__":
     uvicorn.run(

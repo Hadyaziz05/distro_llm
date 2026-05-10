@@ -46,7 +46,7 @@ class Settings:
     # Cap stream length to bound memory usage on Redis
     REDIS_STREAM_MAXLEN: int = field(default_factory=lambda: int(os.getenv("REDIS_STREAM_MAXLEN", "10000")))
     REDIS_MAX_CONNECTIONS: int = field(default_factory=lambda: int(os.getenv("REDIS_MAX_CONNECTIONS", "100")))
-
+    RESULT_TIMEOUT_SEC: int = field(default_factory=lambda: int(os.getenv("RESULT_TIMEOUT_SEC", "60")))
     # ── Concurrency ───────────────────────────────────────────────────────────
     # Semaphore limit per process. With 4 processes: 4 × 250 = 1000 total.
     MAX_CONCURRENT_PER_PROCESS: int = field(default_factory=lambda: int(os.getenv("MAX_CONCURRENT_PER_PROCESS", "250")))

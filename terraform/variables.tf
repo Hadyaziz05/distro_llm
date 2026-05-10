@@ -31,19 +31,19 @@ variable "worker_image" {
 variable "initial_worker_count" {
   description = "Initial number of worker droplets"
   type        = number
-  default     = 3
+  default     = 2
 }
 
 variable "min_worker_count" {
   description = "Minimum worker droplets"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "max_worker_count" {
   description = "Maximum worker droplets"
   type        = number
-  default     = 4
+  default     = 3
 }
 
 variable "cpu_threshold_up" {
@@ -70,10 +70,7 @@ variable "certificate_id" {
   default     = ""
 }
 
-variable "ssh_keys" {
-  description = "List of SSH key IDs or fingerprints to add to worker droplets"
-  type        = list(string)
-}
+
 
 variable "certificate_name" {
   description = "Name of the DigitalOcean certificate for HTTPS"
@@ -84,4 +81,10 @@ variable "certificate_name" {
 variable "admin_cidr" {
   description = "Your admin IP or CIDR for SSH access, e.g. 203.0.113.5/32"
   type        = string
+}
+
+variable "ssh_public_key_path" {
+  description = "Path to your local SSH public key file"
+  type        = string
+  default     = "~/.ssh/id_rsa.pub"
 }

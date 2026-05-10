@@ -294,9 +294,7 @@ async def handle_infer(body: InferRequest):
             return InferResponse(
                 request_id=request_id,
                 status="queued",
-                context_chunks=len(context_chunks),
                 latency_ms=round(total_ms, 2),
-                worker_pid=os.getpid(),
             )
 
         except HTTPException:
@@ -309,41 +307,39 @@ async def handle_infer(body: InferRequest):
             pass
 
 
-# @app.get("/health", response_model=HealthResponse)
-# async def health_check():
-#     """
-#     Health check for the load balancer to probe.
-#     Checks both Qdrant and Redis connectivity.
-#     """
-#     qdrant_ok = False
-#     redis_ok = False
+# ── NEW: Pub/Sub result endpoint ──────────────────────────────────────────────
 
-#     try:
-#         await _qdrant.get_collection(settings.QDRANT_COLLECTION)
-#         qdrant_ok = True
-#     except Exception:
-#         pass
+@app.get("/result/{request_id}")
+async def get_result(request_id: str):
+    """
+    Blocks until the inference worker publishes the result for this request_id,
+    then returns it immediately.
+    """
+    pubsub = _redis.pubsub()
 
-#     try:
-#         await _redis.ping()
-#         redis_ok = True
-#     except Exception:
-#         pass
+    try:
+        await pubsub.subscribe(f"result:{request_id}")
+        logger.info(f"[{request_id}] Subscribed, waiting for inference result...")
 
-#     healthy = qdrant_ok and redis_ok
-#     status_code = 200 if healthy else 503
+        async with asyncio.timeout(settings.RESULT_TIMEOUT_SEC):
+            async for message in pubsub.listen():
+                if message["type"] == "message":
+                    result = json.loads(message["data"])
+                    logger.info(f"[{request_id}] Result received, returning to client.")
+                    return JSONResponse(status_code=200, content=result)
 
-#     return JSONResponse(
-#         status_code=status_code,
-#         content=HealthResponse(
-#             status="healthy" if healthy else "degraded",
-#             pid=os.getpid(),
-#             qdrant_ok=qdrant_ok,
-#             redis_ok=redis_ok,
-#             active_requests=_metrics.active_requests,
-#             metrics=_metrics.snapshot(),
-#         ).model_dump(),
-#     )
+    except asyncio.TimeoutError:
+        logger.warning(f"[{request_id}] Timed out after {settings.RESULT_TIMEOUT_SEC}s waiting for inference.")
+        raise HTTPException(status_code=408, detail="Inference timed out")
+
+    except Exception as e:
+        logger.exception(f"[{request_id}] Unexpected error in result endpoint: {e}")
+        raise HTTPException(status_code=500, detail="Internal error while waiting for result")
+
+    finally:
+        await pubsub.unsubscribe(f"result:{request_id}")
+        await pubsub.aclose()
+        logger.debug(f"[{request_id}] Pub/sub connection closed.")
 
 @app.get("/health")
 async def health_check():

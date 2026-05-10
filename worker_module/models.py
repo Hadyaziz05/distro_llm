@@ -14,9 +14,7 @@ class InferRequest(BaseModel):
 class InferResponse(BaseModel):
     request_id: str
     status: str
-    context_chunks: int
     latency_ms: float
-    worker_pid: int
 
 
 class HealthResponse(BaseModel):

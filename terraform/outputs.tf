@@ -3,26 +3,18 @@ output "redis_droplet_ip" {
   description = "Redis droplet public IP"
 }
 
-output "redis_private_ip" {
-  value       = digitalocean_droplet.redis.private_ip_address
-  description = "Redis droplet private IP (used by workers)"
-}
-
 output "redis_password" {
   value       = random_password.redis_password.result
   sensitive   = true
   description = "Redis password"
 }
 
-output "worker_droplets" {
+output "worker_autoscale_pool" {
+  description = "Autoscale pool resource for workers"
   value = {
-    for idx, droplet in digitalocean_droplet.workers :
-    droplet.name => {
-      public_ip  = droplet.ipv4_address
-      private_ip = droplet.private_ip_address
-    }
+    id   = digitalocean_droplet_autoscale.workers.id
+    name = digitalocean_droplet_autoscale.workers.name
   }
-  description = "Worker droplet IPs"
 }
 
 output "load_balancer_ip" {
@@ -35,9 +27,24 @@ output "load_balancer_domain" {
   description = "Load balancer domain name"
 }
 
+output "digitalocean_loadbalancer" {
+  value       = digitalocean_loadbalancer.main
+  description = "Complete DigitalOcean load balancer resource"
+}
+
 output "vpc_id" {
-  value       = digitalocean_vpc.main.id
+  value       = data.digitalocean_vpc.main.id
   description = "VPC ID"
+}
+
+output "worker_ips" {
+  value       = data.digitalocean_droplets.workers.droplets.*.ipv4_address
+  description = "The public IP addresses of the worker droplets"
+}
+
+output "worker_private_ips" {
+  value       = data.digitalocean_droplets.workers.droplets.*.ipv4_address_private
+  description = "The private IP addresses of the worker droplets"
 }
 
 output "next_steps" {
@@ -62,7 +69,7 @@ output "next_steps" {
     
     📡 Application endpoints:
     - Load Balancer: http://${digitalocean_loadbalancer.main.ip}
-    - Redis: ${digitalocean_droplet.redis.private_ip_address}:6379
+    - Redis: ${digitalocean_droplet.redis.ipv4_address_private}:6379
     
     🔧 Configuration:
     - Redis password: (check terraform state or run: terraform output redis_password)
