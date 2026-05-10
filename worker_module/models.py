@@ -15,6 +15,8 @@ class InferResponse(BaseModel):
     request_id: str
     status: str
     latency_ms: float
+    cache_hit: bool = False
+    answer: Optional[str] = None
 
 
 class HealthResponse(BaseModel):

@@ -23,6 +23,10 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - REDIS_STREAM_KEY=inference_queue
+      - CACHE_COLLECTION=semantic_cache
+      - CACHE_SIMILARITY_THRESHOLD=0.92
+      - REDIS_READER_MAX_CONNECTIONS=10
+      - RESULT_TIMEOUT_SEC=60
     env_file:
       - .env
     volumes:

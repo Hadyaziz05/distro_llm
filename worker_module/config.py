@@ -51,6 +51,10 @@ class Settings:
     # Cap stream length to bound memory usage on Redis
     REDIS_STREAM_MAXLEN: int = field(default_factory=lambda: int(os.getenv("REDIS_STREAM_MAXLEN", "10000")))
     REDIS_MAX_CONNECTIONS: int = field(default_factory=lambda: int(os.getenv("REDIS_MAX_CONNECTIONS", "100")))
+    # Separate client for the shared Pub/Sub connection that receives GPU result
+    # tokens. All 1000+ concurrent requests are multiplexed over one connection;
+    # a small pool is enough.
+    REDIS_READER_MAX_CONNECTIONS: int = field(default_factory=lambda: int(os.getenv("REDIS_READER_MAX_CONNECTIONS", "10")))
     RESULT_TIMEOUT_SEC: int = field(default_factory=lambda: int(os.getenv("RESULT_TIMEOUT_SEC", "60")))
     # ── Concurrency ───────────────────────────────────────────────────────────
     # Semaphore limit per process. With 4 processes: 4 × 250 = 1000 total.
