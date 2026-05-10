@@ -40,6 +40,11 @@ class Settings:
     # Only return chunks above this similarity score (0.0–1.0)
     RAG_SCORE_THRESHOLD: float = field(default_factory=lambda: float(os.getenv("RAG_SCORE_THRESHOLD", "0.6")))
 
+    # ── Semantic Cache ────────────────────────────────────────────────────────
+    CACHE_COLLECTION: str = field(default_factory=lambda: os.getenv("CACHE_COLLECTION", "semantic_cache"))
+    # Must be well above RAG_SCORE_THRESHOLD to avoid false cache hits
+    CACHE_SIMILARITY_THRESHOLD: float = field(default_factory=lambda: float(os.getenv("CACHE_SIMILARITY_THRESHOLD", "0.92")))
+
     # ── Redis ─────────────────────────────────────────────────────────────────
     REDIS_URL: str = field(default_factory=lambda: os.getenv("REDIS_URL", "redis://localhost:6379"))
     REDIS_STREAM_KEY: str = field(default_factory=lambda: os.getenv("REDIS_STREAM_KEY", "inference_queue"))

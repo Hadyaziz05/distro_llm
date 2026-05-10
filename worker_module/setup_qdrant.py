@@ -10,7 +10,7 @@ import asyncio
 from qdrant_client import models
 from qdrant_client.async_qdrant_client import AsyncQdrantClient
 from sentence_transformers import SentenceTransformer
-from worker.config import settings
+from config import settings
 
 # Sample knowledge base documents
 SAMPLE_DOCUMENTS = [
@@ -69,6 +69,22 @@ async def main():
 
     await client.upsert(collection_name=settings.QDRANT_COLLECTION, points=points)
     print(f"Upserted {len(points)} points.")
+
+    # ── Semantic cache collection ─────────────────────────────────────────────
+    # Same vector size and distance as the RAG collection.
+    # Payload schema: answer, prompt, model_version, created_at.
+    # No sample data — populated at runtime after GPU completions.
+    if settings.CACHE_COLLECTION in existing:
+        print(f"Collection '{settings.CACHE_COLLECTION}' already exists, skipping creation.")
+    else:
+        await client.create_collection(
+            collection_name=settings.CACHE_COLLECTION,
+            vectors_config=models.VectorParams(
+                size=dim,
+                distance=models.Distance.COSINE,
+            ),
+        )
+        print(f"Created collection '{settings.CACHE_COLLECTION}'.")
 
     await client.close()
     print("Done. Qdrant is ready.")
