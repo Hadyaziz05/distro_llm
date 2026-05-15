@@ -88,3 +88,15 @@ variable "ssh_public_key_path" {
   type        = string
   default     = "~/.ssh/id_rsa.pub"
 }
+
+variable "allowed_ips" {
+  description = "List of CIDR blocks allowed to access the workers (e.g. for SSH)"
+  type        = list(string)
+  default     = []
+}
+
+variable "redis_allowed_ips" {
+  description = "List of CIDR blocks allowed to access Redis (in addition to worker droplets)"
+  type        = list(string)
+  default     = []
+}
