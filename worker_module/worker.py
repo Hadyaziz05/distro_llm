@@ -422,25 +422,40 @@ async def sse_stream(
                 )
             except asyncio.TimeoutError:
                 logger.warning(f"[{request_id}] GPU timed out after {settings.RESULT_TIMEOUT_SEC}s.")
-                yield f"data: {json.dumps({'error': 'timeout'})}\n\n"
+                yield f"data: {json.dumps({'error': 'timeout'})}\\n\\n"
                 return
 
             parsed = json.loads(raw)
             chunk = parsed.get("chunk", "")
             is_final = parsed.get("is_final", False)
+            error = parsed.get("error")
 
             chunks.append(chunk)
-            yield f"data: {json.dumps({'chunk': chunk, 'is_final': is_final})}\n\n"
+            
+            # Log what we're sending for debugging
+            logger.debug(f"[{request_id}] SSE yielding chunk (final={is_final}, len={len(chunk)})")
+            
+            yield f"data: {json.dumps({'chunk': chunk, 'is_final': is_final})}\\n\\n"
 
-            if is_final:
+            if is_final or error:
                 full_answer = "".join(chunks)
-                logger.info(f"[{request_id}] Stream complete ({len(chunks)} chunks). Writing to cache.")
-                await step_cache_write(embedding, prompt, full_answer, request_id)
-                yield "data: [DONE]\n\n"
+                if not error:
+                    logger.info(f"[{request_id}] Stream complete ({len(chunks)} chunks). Writing to cache.")
+                    await step_cache_write(embedding, prompt, full_answer, request_id)
+                else:
+                    logger.error(f"[{request_id}] Stream ended with error: {error}")
+                yield "data: [DONE]\\n\\n"
                 return
 
+    except Exception as e:
+        logger.exception(f"[{request_id}] SSE stream error: {e}")
+        yield f"data: {json.dumps({'error': str(e)})}\\n\\n"
+        yield "data: [DONE]\\n\\n"
     finally:
-        await _pubsub.unsubscribe(f"result:{request_id}")
+        try:
+            await _pubsub.unsubscribe(f"result:{request_id}")
+        except Exception as e:
+            logger.warning(f"[{request_id}] Failed to unsubscribe: {e}")
         _pending.pop(request_id, None)
         logger.debug(f"[{request_id}] SSE stream cleaned up.")
 
@@ -473,7 +488,12 @@ async def handle_infer(body: InferRequest):
                 return StreamingResponse(
                     sse_cache_hit(request_id, cached_answer),
                     media_type="text/event-stream",
-                    headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+                    headers={
+                        "X-Accel-Buffering": "no",
+                        "Cache-Control": "no-cache",
+                        "Connection": "keep-alive",
+                        "Content-Type": "text/event-stream; charset=utf-8",
+                    },
                 )
 
             # ── Step 3: RAG ────────────────────────────────────────────────
@@ -505,7 +525,12 @@ async def handle_infer(body: InferRequest):
     return StreamingResponse(
         sse_stream(request_id, embedding, body.text, queue),
         media_type="text/event-stream",
-        headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"},
+        headers={
+            "X-Accel-Buffering": "no",
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream; charset=utf-8",
+        },
     )
 
 
